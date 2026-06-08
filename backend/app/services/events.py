@@ -66,7 +66,8 @@ _bus: EventBus | None = None
 def get_event_bus() -> EventBus:
     global _bus
     if _bus is None:
-        _bus = RedisEventBus()
+        # Local/desktop mode (inline_dispatch) has no Redis — use in-memory.
+        _bus = InMemoryEventBus() if settings.inline_dispatch else RedisEventBus()
     return _bus
 
 

@@ -61,7 +61,8 @@ _limiter: RateLimiter | None = None
 def get_rate_limiter() -> RateLimiter:
     global _limiter
     if _limiter is None:
-        _limiter = RedisRateLimiter()
+        # Local/desktop mode (inline_dispatch) has no Redis — use in-memory.
+        _limiter = InMemoryRateLimiter() if settings.inline_dispatch else RedisRateLimiter()
     return _limiter
 
 
