@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.db
+.pytest_cache/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+
+# Tauri / Rust
+desktop-app/src-tauri/target/
+desktop-app/src-tauri/gen/
+desktop-app/src-tauri/binaries/planforge-backend*
+desktop-app/src-tauri/icons/
+
+# Build artifacts
+backend/dist/
+backend/build/
+*.spec.bak
+
+# Env / secrets
+.env
+
+# Misc
+.DS_Store
+*.log

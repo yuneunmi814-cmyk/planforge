@@ -1,0 +1,25 @@
+{
+  "name": "planforge-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PlanForge desktop app (Tauri shell + bundled FastAPI sidecar)",
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
+  },
+  "dependencies": {
+    "next": "^15.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0",
+    "typescript": "^5.6.0",
+    "@types/react": "^18.3.0",
+    "@types/node": "^22.0.0"
+  }
+}

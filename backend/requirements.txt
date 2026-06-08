@@ -1,0 +1,14 @@
+fastapi>=0.115
+uvicorn[standard]>=0.30
+sqlalchemy>=2.0.35
+pydantic[email]>=2.10
+pydantic-settings>=2.6
+python-jose[cryptography]>=3.3
+bcrypt>=4.2
+python-multipart>=0.0.9
+redis>=5.0
+httpx>=0.27
+anthropic>=0.40
+
+# PostgreSQL driver — production. Dev/test default to SQLite.
+#   pip install "psycopg[binary]>=3.2"

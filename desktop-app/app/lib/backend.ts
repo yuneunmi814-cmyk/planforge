@@ -1,0 +1,140 @@
+// Thin client for the bundled FastAPI sidecar (HTTP on 127.0.0.1:PORT).
+// The port must match PLANFORGE_PORT passed to the sidecar in src-tauri/src/lib.rs
+// and be allow-listed in tauri.conf.json CSP connect-src.
+
+import { currentLocale } from "./i18n";
+
+const PORT = 8000;
+export const BASE = `http://localhost:${PORT}`;
+export const API = `${BASE}/api/v1`;
+
+// Sent on every request so the backend localizes error messages (KO/EN).
+function baseHeaders(): Record<string, string> {
+  return { "Content-Type": "application/json", "Accept-Language": currentLocale() };
+}
+
+/** Poll /health until the sidecar is up (uvicorn takes ~0.5–2s to boot). */
+export async function waitForBackend(timeoutMs = 15000): Promise<boolean> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    try {
+      const r = await fetch(`${BASE}/health`);
+      if (r.ok) return true;
+    } catch {
+      /* not up yet */
+    }
+    await new Promise((res) => setTimeout(res, 300));
+  }
+  throw new Error("백엔드가 시간 내에 준비되지 않았습니다.");
+}
+
+// --- Local single-user auth bootstrap --------------------------------------
+// A desktop app shouldn't ask the user to register. On first launch we create a
+// local account (the first user becomes an approved admin) and remember the
+// credentials; later launches just log in.
+const CRED_KEY = "planforge.localCred";
+
+type Cred = { email: string; password: string };
+
+function loadCred(): Cred {
+  const raw = typeof localStorage !== "undefined" ? localStorage.getItem(CRED_KEY) : null;
+  if (raw) return JSON.parse(raw);
+  const cred: Cred = {
+    email: `local-${Math.random().toString(36).slice(2, 10)}@planforge.app`,
+    password: Math.random().toString(36).slice(2) + "A1!",
+  };
+  localStorage.setItem(CRED_KEY, JSON.stringify(cred));
+  return cred;
+}
+
+let token: string | null = null;
+
+export async function ensureAuth(): Promise<void> {
+  if (token) return;
+  const cred = loadCred();
+  // Try login first; if the account doesn't exist yet, sign up then login.
+  let res = await fetch(`${API}/auth/login`, {
+    method: "POST",
+    headers: baseHeaders(),
+    body: JSON.stringify(cred),
+  });
+  if (res.status === 401) {
+    await fetch(`${API}/auth/signup`, {
+      method: "POST",
+      headers: baseHeaders(),
+      body: JSON.stringify(cred),
+    });
+    res = await fetch(`${API}/auth/login`, {
+      method: "POST",
+      headers: baseHeaders(),
+      body: JSON.stringify(cred),
+    });
+  }
+  const data = await res.json();
+  token = data.accessToken;
+}
+
+async function authedFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  await ensureAuth();
+  return fetch(`${API}${path}`, {
+    ...init,
+    headers: { ...baseHeaders(), Authorization: `Bearer ${token}`, ...(init.headers || {}) },
+  });
+}
+
+export type Section = { type: string; title: string; markdown: string; version: number };
+
+/** Create a project (async) → returns { projectId, jobId }. */
+export async function createProject(idea: string): Promise<{ projectId: number; jobId: number }> {
+  const res = await authedFetch("/projects", { method: "POST", body: JSON.stringify({ idea }) });
+  if (!res.ok) throw new Error((await res.json())?.error?.message ?? "생성 요청 실패");
+  const j = await res.json();
+  return { projectId: j.projectId, jobId: j.jobId };
+}
+
+/** Poll a job until it reaches a terminal state. */
+export async function waitForJob(
+  projectId: number,
+  jobId: number,
+  onStatus?: (s: string) => void,
+): Promise<string> {
+  for (;;) {
+    const res = await authedFetch(`/projects/${projectId}/jobs/${jobId}`);
+    const j = await res.json();
+    onStatus?.(j.status);
+    if (["success", "rejected", "failed"].includes(j.status)) return j.status;
+    await new Promise((r) => setTimeout(r, 600));
+  }
+}
+
+export async function getSections(projectId: number): Promise<Section[]> {
+  const res = await authedFetch(`/projects/${projectId}`);
+  const j = await res.json();
+  return j.sections ?? [];
+}
+
+// --- Settings (LLM engine) -------------------------------------------------
+export type Settings = {
+  llmProvider: "ollama" | "anthropic" | "fake";
+  ollamaBaseUrl: string;
+  ollamaModel: string;
+  anthropicModel: string;
+  hasAnthropicKey: boolean;
+  anthropicKeyMasked: string;
+};
+
+export async function getSettings(): Promise<Settings> {
+  const res = await authedFetch("/settings");
+  return res.json();
+}
+
+export async function updateSettings(patch: Partial<Settings> & { anthropicApiKey?: string }): Promise<Settings> {
+  const res = await authedFetch("/settings", { method: "PUT", body: JSON.stringify(patch) });
+  if (!res.ok) throw new Error((await res.json())?.error?.message ?? "설정 저장 실패");
+  return res.json();
+}
+
+export async function listOllamaModels(): Promise<{ available: boolean; models: string[] }> {
+  const res = await authedFetch("/settings/ollama/models");
+  return res.json();
+}

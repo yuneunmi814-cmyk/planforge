@@ -1,0 +1,90 @@
+name: Release
+
+# Build installers and attach them to a GitHub Release.
+# Trigger by pushing a tag like `v0.1.0`, or run manually.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest   # Apple Silicon (aarch64)
+          - os: macos-13       # Intel (x86_64)
+          - os: windows-latest # x86_64
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # --- 1) Build the FastAPI backend into a single sidecar binary ---------
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend + PyInstaller
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements-desktop.txt
+
+      - name: Build sidecar (PyInstaller)
+        shell: bash
+        working-directory: backend
+        run: pyinstaller planforge-backend.spec
+
+      # --- 2) Rust toolchain (needed for tauri build + target triple) -------
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Place sidecar with Tauri target-triple suffix
+        shell: bash
+        run: |
+          TRIPLE=$(rustc -Vv | sed -n 's/host: //p')
+          echo "target triple: $TRIPLE"
+          mkdir -p desktop-app/src-tauri/binaries
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            cp backend/dist/planforge-backend.exe "desktop-app/src-tauri/binaries/planforge-backend-$TRIPLE.exe"
+          else
+            cp backend/dist/planforge-backend "desktop-app/src-tauri/binaries/planforge-backend-$TRIPLE"
+            chmod +x "desktop-app/src-tauri/binaries/planforge-backend-$TRIPLE"
+          fi
+
+      # --- 3) Frontend deps + icons -----------------------------------------
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install frontend deps
+        working-directory: desktop-app
+        run: npm install --no-audit --no-fund
+
+      - name: Generate app icons
+        working-directory: desktop-app
+        run: npm run tauri icon app-icon.png
+
+      # --- 4) Build the Tauri app + upload to the Release --------------------
+      - name: Build & release (tauri-action)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # macOS code signing / notarization (optional). Leave unset for an
+          # unsigned build (users right-click → Open to bypass Gatekeeper).
+          # APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          # APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          # APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          # APPLE_ID: ${{ secrets.APPLE_ID }}
+          # APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          # APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        with:
+          projectPath: desktop-app
+          tagName: ${{ github.ref_type == 'tag' && github.ref_name || 'v0.0.0-dev' }}
+          releaseName: "PlanForge ${{ github.ref_name }}"
+          releaseDraft: true
+          prerelease: false
