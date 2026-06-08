@@ -126,6 +126,10 @@ class SettingsUpdateReq(BaseModel):
     anthropicModel: str | None = None
 
 
+class OllamaPullReq(BaseModel):
+    model: str | None = None  # defaults to the configured ollamaModel
+
+
 # ---- Account (PF-5) --------------------------------------------------------
 class AccountDeleteRes(BaseModel):
     """Transparency: what was purged immediately vs legally retained."""

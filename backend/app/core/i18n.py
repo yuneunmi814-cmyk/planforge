@@ -37,6 +37,7 @@ MESSAGES: dict[str, dict[str, str]] = {
     "unknown_section_type": {"en": "Unknown section type.", "ko": "존재하지 않는 섹션 타입입니다."},
     "section_not_generated": {"en": "This section hasn't been generated yet.", "ko": "아직 생성되지 않은 섹션은 수정할 수 없습니다."},
     "rate_limited": {"en": "Too many requests. Please try again shortly.", "ko": "요청이 너무 많습니다. 잠시 후 다시 시도하세요."},
+    "ollama_not_running": {"en": "Ollama isn't running. Start it and try again.", "ko": "Ollama가 실행 중이 아닙니다. 실행 후 다시 시도하세요."},
     # generic (error envelope)
     "internal_error": {"en": "An internal server error occurred.", "ko": "서버 내부 오류가 발생했습니다."},
     "request_failed": {"en": "The request could not be processed.", "ko": "요청을 처리할 수 없습니다."},

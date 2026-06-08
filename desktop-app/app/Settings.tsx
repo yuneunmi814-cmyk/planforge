@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import OllamaOnboarding from "./OllamaOnboarding";
 import { getSettings, listOllamaModels, Settings, updateSettings } from "./lib/backend";
 import { useI18n } from "./lib/i18n";
 
@@ -68,9 +69,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               <option key={m} value={m} />
             ))}
           </datalist>
-          {!ollama.available && (
-            <p style={{ color: "#b3261e", fontSize: 12 }}>{t("settings.ollama.hint", { model: s.ollamaModel })}</p>
-          )}
+          <OllamaOnboarding model={s.ollamaModel} />
         </>
       )}
 

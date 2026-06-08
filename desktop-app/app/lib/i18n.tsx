@@ -41,6 +41,27 @@ const DICT: Record<string, { en: string; ko: string }> = {
     ko: "키는 이 PC(~/.planforge)에만 저장되며 외부로 전송되지 않습니다.",
   },
   "settings.saved": { en: "Saved.", ko: "저장됐습니다." },
+
+  // Ollama onboarding
+  "ob.checking": { en: "Checking Ollama…", ko: "Ollama 확인 중…" },
+  "ob.ready": { en: "✓ Ollama is ready (model: {model})", ko: "✓ Ollama 준비 완료 (모델: {model})" },
+  "ob.notInstalled.title": { en: "Ollama isn't installed", ko: "Ollama가 설치되어 있지 않습니다" },
+  "ob.notInstalled.body": {
+    en: "PlanForge uses Ollama to run a model locally (free, no key). Install it, then come back.",
+    ko: "PlanForge는 Ollama로 로컬에서 모델을 돌립니다(무료, 키 불필요). 설치 후 돌아오세요.",
+  },
+  "ob.install": { en: "Install Ollama", ko: "Ollama 설치" },
+  "ob.notRunning.title": { en: "Ollama is installed but not running", ko: "Ollama가 설치됐지만 실행 중이 아닙니다" },
+  "ob.notRunning.body": { en: "Start the Ollama app, then re-check.", ko: "Ollama 앱을 실행한 뒤 다시 확인하세요." },
+  "ob.recheck": { en: "Re-check", ko: "다시 확인" },
+  "ob.needModel.title": { en: "Download a model", ko: "모델 다운로드" },
+  "ob.needModel.body": {
+    en: "Model \"{model}\" isn't downloaded yet (a few GB, one time).",
+    ko: "모델 \"{model}\"이(가) 아직 없습니다 (수 GB, 1회).",
+  },
+  "ob.pull": { en: "Download {model}", ko: "{model} 다운로드" },
+  "ob.pulling": { en: "Downloading… {pct}%", ko: "다운로드 중… {pct}%" },
+  "ob.pullDone": { en: "✓ Model downloaded", ko: "✓ 모델 다운로드 완료" },
 };
 
 function format(s: string, vars?: Record<string, string | number>): string {

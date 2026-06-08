@@ -138,3 +138,49 @@ export async function listOllamaModels(): Promise<{ available: boolean; models: 
   const res = await authedFetch("/settings/ollama/models");
   return res.json();
 }
+
+// --- Ollama onboarding -----------------------------------------------------
+export type OllamaStatus = {
+  installed: boolean;
+  running: boolean;
+  version?: string;
+  models: string[];
+  downloadUrl: string;
+};
+
+export async function ollamaStatus(): Promise<OllamaStatus> {
+  const res = await authedFetch("/settings/ollama/status");
+  return res.json();
+}
+
+export async function openOllamaDownload(): Promise<void> {
+  await authedFetch("/settings/ollama/open-download", { method: "POST" });
+}
+
+export type PullProgress = { status: string; completed?: number; total?: number };
+
+/** Pull a model, invoking onProgress for each NDJSON line from Ollama. */
+export async function pullOllamaModel(model: string, onProgress: (p: PullProgress) => void): Promise<void> {
+  const res = await authedFetch("/settings/ollama/pull", { method: "POST", body: JSON.stringify({ model }) });
+  if (!res.ok || !res.body) throw new Error((await res.json().catch(() => null))?.error?.message ?? "pull failed");
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buf = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let idx: number;
+    while ((idx = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, idx).trim();
+      buf = buf.slice(idx + 1);
+      if (line) {
+        try {
+          onProgress(JSON.parse(line));
+        } catch {
+          /* ignore partial/non-JSON */
+        }
+      }
+    }
+  }
+}
