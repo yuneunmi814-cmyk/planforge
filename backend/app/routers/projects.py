@@ -294,6 +294,9 @@ def get_project(
         .order_by(Section.id.asc())
     ).all()
     latest = _latest_job(db, project_id)
+    present = {s.type for s in sections}
+    # Only meaningful once at least one section exists (i.e. a generation ran).
+    missing = [t for t in SECTION_TYPES if t not in present] if present else []
     return ProjectRes(
         id=project.id,
         title=project.title,
@@ -305,6 +308,7 @@ def get_project(
             SectionRes(type=s.type, title=s.title, markdown=s.markdown, version=s.version)
             for s in sections
         ],
+        missingSections=missing,
     )
 
 

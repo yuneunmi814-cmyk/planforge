@@ -86,6 +86,9 @@ class ProjectRes(BaseModel):
     createdAt: datetime
     latestJob: JobRes | None = None
     sections: list[SectionRes] = []
+    # Canonical section types not present yet — non-empty means a weak model
+    # produced a partial document (UI surfaces a hint to use a better engine).
+    missingSections: list[str] = []
 
 
 class ProjectSummaryRes(BaseModel):

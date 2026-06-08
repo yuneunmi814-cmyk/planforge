@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import SettingsPanel from "./Settings";
-import { createProject, getSections, Section, waitForBackend, waitForJob } from "./lib/backend";
+import { createProject, getProjectDetail, Section, waitForBackend, waitForJob } from "./lib/backend";
 import { useI18n } from "./lib/i18n";
+
+const TOTAL_SECTIONS = 9;
 
 type Phase = "booting" | "ready" | "generating" | "done" | "error";
 
@@ -13,6 +15,7 @@ export default function Home() {
   const [idea, setIdea] = useState("");
   const [status, setStatus] = useState("");
   const [sections, setSections] = useState<Section[]>([]);
+  const [missing, setMissing] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [showSettings, setShowSettings] = useState(false);
 
@@ -28,6 +31,7 @@ export default function Home() {
   async function onGenerate() {
     setError("");
     setSections([]);
+    setMissing([]);
     setPhase("generating");
     try {
       const { projectId, jobId } = await createProject(idea.trim());
@@ -37,7 +41,9 @@ export default function Home() {
         setPhase("error");
         return;
       }
-      setSections(await getSections(projectId));
+      const detail = await getProjectDetail(projectId);
+      setSections(detail.sections);
+      setMissing(detail.missingSections);
       setPhase("done");
     } catch (e) {
       setError(String(e));
@@ -98,6 +104,12 @@ export default function Home() {
         </>
       )}
 
+      {missing.length > 0 && (
+        <Banner tone="warn">
+          {t("generate.partial", { got: TOTAL_SECTIONS - missing.length, total: TOTAL_SECTIONS })}
+        </Banner>
+      )}
+
       {sections.map((s) => (
         <section key={s.type} style={{ marginTop: 24 }}>
           <h2 style={{ fontSize: 18, borderBottom: "1px solid #eee", paddingBottom: 6 }}>{s.title}</h2>
@@ -118,18 +130,11 @@ const btn: React.CSSProperties = {
   cursor: "pointer",
 };
 
-function Banner({ children, tone }: { children: React.ReactNode; tone?: "error" }) {
+function Banner({ children, tone }: { children: React.ReactNode; tone?: "error" | "warn" }) {
+  const bg = tone === "error" ? "#fdecea" : tone === "warn" ? "#fff6e6" : "#eef4ff";
+  const fg = tone === "error" ? "#b3261e" : tone === "warn" ? "#8a5a00" : "#1a3a7a";
   return (
-    <div
-      style={{
-        margin: "16px 0",
-        padding: "12px 16px",
-        borderRadius: 8,
-        background: tone === "error" ? "#fdecea" : "#eef4ff",
-        color: tone === "error" ? "#b3261e" : "#1a3a7a",
-        fontSize: 14,
-      }}
-    >
+    <div style={{ margin: "16px 0", padding: "12px 16px", borderRadius: 8, background: bg, color: fg, fontSize: 14 }}>
       {children}
     </div>
   );

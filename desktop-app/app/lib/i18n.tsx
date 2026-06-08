@@ -13,6 +13,10 @@ const DICT: Record<string, { en: string; ko: string }> = {
   "generate.button": { en: "Generate spec", ko: "기획서 생성" },
   "generate.running": { en: "Generating… ({status})", ko: "생성 중… ({status})" },
   "generate.result": { en: "Result: {status}", ko: "생성 결과: {status}" },
+  "generate.partial": {
+    en: "This model produced only {got} of {total} sections. For the full document, pick a larger Ollama model or switch to Anthropic in Settings.",
+    ko: "이 모델은 {total}개 중 {got}개 섹션만 생성했습니다. 전체 문서를 보려면 더 큰 Ollama 모델을 쓰거나 설정에서 Anthropic으로 전환하세요.",
+  },
   "nav.settings": { en: "Settings", ko: "설정" },
 
   "settings.title": { en: "Settings · AI engine", ko: "설정 · AI 엔진" },

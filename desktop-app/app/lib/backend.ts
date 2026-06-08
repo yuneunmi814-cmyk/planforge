@@ -107,10 +107,12 @@ export async function waitForJob(
   }
 }
 
-export async function getSections(projectId: number): Promise<Section[]> {
+export type ProjectDetail = { sections: Section[]; missingSections: string[] };
+
+export async function getProjectDetail(projectId: number): Promise<ProjectDetail> {
   const res = await authedFetch(`/projects/${projectId}`);
   const j = await res.json();
-  return j.sections ?? [];
+  return { sections: j.sections ?? [], missingSections: j.missingSections ?? [] };
 }
 
 // --- Settings (LLM engine) -------------------------------------------------
