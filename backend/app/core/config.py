@@ -83,6 +83,14 @@ class Settings(BaseSettings):
     default_auth: str = "JWT(Access/Refresh) + Bcrypt + AES-256"
 
     cors_origins: list[str] = ["http://localhost:5173"]
+    # The desktop webview is a cross-origin caller: Tauri serves the UI from
+    # tauri://localhost (macOS) or http://tauri.localhost (Windows), and dev runs
+    # Next on http://localhost:3000 — none of which are in cors_origins, so every
+    # fetch to the sidecar fails CORS without this. The sidecar only binds
+    # 127.0.0.1, so allowing local/tauri origins is safe.
+    cors_origin_regex: str = (
+        r"^(tauri://localhost|https?://(localhost|127\.0\.0\.1|tauri\.localhost)(:\d+)?)$"
+    )
 
 
 @lru_cache
