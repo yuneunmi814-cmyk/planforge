@@ -1,5 +1,8 @@
 """PF-5: document export (md/json) + account withdrawal/retention policy."""
 
+import json
+from pathlib import Path
+
 from app.core import database
 from app.models import SECTION_TYPES, AuditLog, Project, Section, UsageLog, User
 from app.services.queue import get_queue
@@ -52,6 +55,61 @@ def test_export_bad_format_422(client):
     headers = auth_headers(client)
     pid = _make_project(client, headers)
     assert client.get(f"/api/v1/projects/{pid}/export?format=pdf", headers=headers).status_code == 422
+
+
+def test_save_export_writes_markdown_file(client, tmp_path, monkeypatch):
+    from app.routers import projects
+
+    monkeypatch.setattr(projects.settings, "export_dir", str(tmp_path))
+    headers = auth_headers(client)
+    pid = _make_project(client, headers)
+
+    res = client.post(f"/api/v1/projects/{pid}/export/save?format=md", headers=headers)
+    assert res.status_code == 200
+    saved = Path(res.json()["path"])
+    assert saved.exists()
+    assert saved.parent == tmp_path
+    assert saved.suffix == ".md"
+    # The saved file matches the GET download byte-for-byte.
+    getres = client.get(f"/api/v1/projects/{pid}/export?format=md", headers=headers)
+    assert saved.read_text(encoding="utf-8") == getres.text
+
+
+def test_save_export_json_file(client, tmp_path, monkeypatch):
+    from app.routers import projects
+
+    monkeypatch.setattr(projects.settings, "export_dir", str(tmp_path))
+    headers = auth_headers(client)
+    pid = _make_project(client, headers)
+
+    res = client.post(f"/api/v1/projects/{pid}/export/save?format=json", headers=headers)
+    assert res.status_code == 200
+    obj = json.loads(Path(res.json()["path"]).read_text(encoding="utf-8"))
+    assert [s["type"] for s in obj["sections"]] == list(SECTION_TYPES)
+
+
+def test_save_export_bad_format_422(client):
+    headers = auth_headers(client)
+    pid = _make_project(client, headers)
+    assert client.post(f"/api/v1/projects/{pid}/export/save?format=pdf", headers=headers).status_code == 422
+
+
+def test_reveal_requires_a_saved_file(client, tmp_path, monkeypatch):
+    from app.routers import projects
+
+    monkeypatch.setattr(projects.settings, "export_dir", str(tmp_path))
+    # Stub the OS launcher so the test never opens a real Finder/Explorer window.
+    monkeypatch.setattr(projects, "_reveal_in_file_manager", lambda p: True)
+    headers = auth_headers(client)
+    pid = _make_project(client, headers)
+
+    # Nothing saved yet → 404.
+    assert client.post(f"/api/v1/projects/{pid}/export/reveal?format=md", headers=headers).status_code == 404
+    # After saving, reveal succeeds.
+    client.post(f"/api/v1/projects/{pid}/export/save?format=md", headers=headers)
+    res = client.post(f"/api/v1/projects/{pid}/export/reveal?format=md", headers=headers)
+    assert res.status_code == 200
+    assert res.json()["revealed"] is True
 
 
 def test_delete_account_purges_pii_and_retains_logs(client, db_session):

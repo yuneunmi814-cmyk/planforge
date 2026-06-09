@@ -2,7 +2,17 @@
 
 import { useEffect, useState } from "react";
 import SettingsPanel from "./Settings";
-import { createProject, getProjectDetail, Section, waitForBackend, waitForJob } from "./lib/backend";
+import {
+  createProject,
+  exportText,
+  type ExportFormat,
+  getProjectDetail,
+  revealExport,
+  saveExport,
+  Section,
+  waitForBackend,
+  waitForJob,
+} from "./lib/backend";
 import { useI18n } from "./lib/i18n";
 
 const TOTAL_SECTIONS = 9;
@@ -16,6 +26,9 @@ export default function Home() {
   const [status, setStatus] = useState("");
   const [sections, setSections] = useState<Section[]>([]);
   const [missing, setMissing] = useState<string[]>([]);
+  const [projectId, setProjectId] = useState<number | null>(null);
+  const [exportMsg, setExportMsg] = useState("");
+  const [lastSaved, setLastSaved] = useState<{ format: ExportFormat; path: string } | null>(null);
   const [error, setError] = useState("");
   const [showSettings, setShowSettings] = useState(false);
 
@@ -32,23 +45,54 @@ export default function Home() {
     setError("");
     setSections([]);
     setMissing([]);
+    setProjectId(null);
+    setExportMsg("");
+    setLastSaved(null);
     setPhase("generating");
     try {
-      const { projectId, jobId } = await createProject(idea.trim());
-      const final = await waitForJob(projectId, jobId, setStatus);
+      const { projectId: pid, jobId } = await createProject(idea.trim());
+      const final = await waitForJob(pid, jobId, setStatus);
       if (final !== "success") {
         setError(t("generate.result", { status: final }));
         setPhase("error");
         return;
       }
-      const detail = await getProjectDetail(projectId);
+      const detail = await getProjectDetail(pid);
       setSections(detail.sections);
       setMissing(detail.missingSections);
+      setProjectId(pid);
       setPhase("done");
     } catch (e) {
       setError(String(e));
       setPhase("error");
     }
+  }
+
+  async function onCopy() {
+    if (projectId == null) return;
+    try {
+      await navigator.clipboard.writeText(await exportText(projectId, "md"));
+      setLastSaved(null);
+      setExportMsg(t("export.copied"));
+    } catch {
+      setExportMsg(t("export.copyFailed"));
+    }
+  }
+
+  async function onSave(format: ExportFormat) {
+    if (projectId == null) return;
+    try {
+      const saved = await saveExport(projectId, format);
+      setLastSaved({ format, path: saved.path });
+      setExportMsg(t("export.saved", { path: saved.path }));
+    } catch (e) {
+      setExportMsg(t("export.failed", { msg: String(e) }));
+    }
+  }
+
+  async function onReveal() {
+    if (projectId == null || !lastSaved) return;
+    await revealExport(projectId, lastSaved.format);
   }
 
   return (
@@ -110,6 +154,22 @@ export default function Home() {
         </Banner>
       )}
 
+      {phase === "done" && sections.length > 0 && (
+        <div style={{ marginTop: 20, display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+          <button onClick={onCopy} style={btn}>{t("export.copy")}</button>
+          <button onClick={() => onSave("md")} style={btn}>{t("export.saveMd")}</button>
+          <button onClick={() => onSave("json")} style={btn}>{t("export.saveJson")}</button>
+          {exportMsg && (
+            <span style={{ fontSize: 13, color: "#555", display: "inline-flex", alignItems: "center", gap: 8 }}>
+              {exportMsg}
+              {lastSaved && (
+                <button onClick={onReveal} style={linkBtn}>{t("export.reveal")}</button>
+              )}
+            </span>
+          )}
+        </div>
+      )}
+
       {sections.map((s) => (
         <section key={s.type} style={{ marginTop: 24 }}>
           <h2 style={{ fontSize: 18, borderBottom: "1px solid #eee", paddingBottom: 6 }}>{s.title}</h2>
@@ -128,6 +188,16 @@ const btn: React.CSSProperties = {
   border: "1px solid #ddd",
   background: "#fff",
   cursor: "pointer",
+};
+
+const linkBtn: React.CSSProperties = {
+  border: "none",
+  background: "none",
+  padding: 0,
+  color: "#1a3a7a",
+  textDecoration: "underline",
+  cursor: "pointer",
+  fontSize: 13,
 };
 
 function Banner({ children, tone }: { children: React.ReactNode; tone?: "error" | "warn" }) {

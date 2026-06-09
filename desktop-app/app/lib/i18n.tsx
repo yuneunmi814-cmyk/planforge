@@ -19,6 +19,16 @@ const DICT: Record<string, { en: string; ko: string }> = {
   },
   "nav.settings": { en: "Settings", ko: "설정" },
 
+  // Export / download
+  "export.copy": { en: "Copy Markdown", ko: "마크다운 복사" },
+  "export.saveMd": { en: "Save .md", ko: ".md로 저장" },
+  "export.saveJson": { en: "Save .json", ko: ".json으로 저장" },
+  "export.copied": { en: "Copied to clipboard.", ko: "클립보드에 복사했습니다." },
+  "export.copyFailed": { en: "Couldn't copy — use Save instead.", ko: "복사하지 못했습니다 — 저장을 이용하세요." },
+  "export.saved": { en: "Saved to {path}", ko: "{path} 에 저장했습니다" },
+  "export.reveal": { en: "Show in folder", ko: "폴더에서 보기" },
+  "export.failed": { en: "Export failed: {msg}", ko: "내보내기 실패: {msg}" },
+
   "settings.title": { en: "Settings · AI engine", ko: "설정 · AI 엔진" },
   "settings.close": { en: "Close", ko: "닫기" },
   "settings.loading": { en: "Loading settings…", ko: "설정 불러오는 중…" },

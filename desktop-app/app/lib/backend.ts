@@ -115,6 +115,32 @@ export async function getProjectDetail(projectId: number): Promise<ProjectDetail
   return { sections: j.sections ?? [], missingSections: j.missingSections ?? [] };
 }
 
+// --- Export (assembled document) -------------------------------------------
+export type ExportFormat = "md" | "json";
+
+/** Fetch the assembled document as a string (used for clipboard copy). */
+export async function exportText(projectId: number, format: ExportFormat): Promise<string> {
+  const res = await authedFetch(`/projects/${projectId}/export?format=${format}`);
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error?.message ?? "내보내기 실패");
+  return res.text();
+}
+
+export type SavedExport = { path: string; filename: string; format: ExportFormat };
+
+/** Write the assembled document to disk via the sidecar; returns its path. */
+export async function saveExport(projectId: number, format: ExportFormat): Promise<SavedExport> {
+  const res = await authedFetch(`/projects/${projectId}/export/save?format=${format}`, { method: "POST" });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error?.message ?? "저장 실패");
+  return res.json();
+}
+
+/** Reveal a previously-saved export in the OS file manager. */
+export async function revealExport(projectId: number, format: ExportFormat): Promise<boolean> {
+  const res = await authedFetch(`/projects/${projectId}/export/reveal?format=${format}`, { method: "POST" });
+  if (!res.ok) return false;
+  return (await res.json())?.revealed ?? false;
+}
+
 // --- Settings (LLM engine) -------------------------------------------------
 export type Settings = {
   llmProvider: "ollama" | "anthropic" | "fake";

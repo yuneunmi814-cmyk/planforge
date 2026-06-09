@@ -60,6 +60,12 @@ class Settings(BaseSettings):
     # Design §10: parse failure → 1 retry, then mark the job failed.
     llm_parse_max_attempts: int = 2
 
+    # --- Export (PF-5 file download) ---
+    # Where "Save .md / .json" writes the assembled document. Defaults to a
+    # PlanForge subfolder of the OS Downloads dir (browser-like). Override with
+    # PLANFORGE_EXPORT_DIR; tests point it at a temp dir.
+    export_dir: str = str(Path.home() / "Downloads" / "PlanForge")
+
     # --- Prompts (single source of truth = the prompts/ folder) ---
     prompts_dir: str = _PROMPTS_DIR_DEFAULT
     prompt_file_generate: str = "PlanForge_시스템프롬프트_실전투입용.md"

@@ -5,7 +5,12 @@ returns 202 Accepted + a job_id; the client polls the job until it reaches a
 terminal state, then fetches the project's sections."""
 
 import json
+import re
+import subprocess
+import sys
 import time
+from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, Response, status
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -320,6 +325,78 @@ def _ordered_latest_sections(db: Session, project_id: int) -> list[Section]:
     return sorted(sections, key=lambda s: order.get(s.type, len(order)))
 
 
+def _export_json_obj(project: Project, sections: list[Section], assumed) -> dict:
+    return {
+        "id": project.id,
+        "title": project.title,
+        "idea": project.idea,
+        "assumedStack": assumed,
+        "sections": [
+            {"type": s.type, "title": s.title, "markdown": s.markdown, "version": s.version}
+            for s in sections
+        ],
+    }
+
+
+def _export_markdown(project: Project, sections: list[Section], assumed) -> str:
+    lines = [f"# {project.title}", "", f"> {project.idea}", ""]
+    if assumed:
+        lines.append("**가정한 스택**: " + ", ".join(f"{k}={v}" for k, v in assumed.items()))
+        lines.append("")
+    for s in sections:
+        lines.append(f"## {s.title}")
+        lines.append("")
+        lines.append(s.markdown)
+        lines.append("")
+    return "\n".join(lines)
+
+
+def _assemble_export(db: Session, project: Project, format: str) -> str:
+    """Serialize the assembled document (design §5 order) to a single string —
+    used both by the GET download and by the save-to-disk endpoint."""
+    sections = _ordered_latest_sections(db, project.id)
+    assumed = json.loads(project.assumed_stack) if project.assumed_stack else None
+    if format == "json":
+        return json.dumps(_export_json_obj(project, sections, assumed), ensure_ascii=False, indent=2)
+    return _export_markdown(project, sections, assumed)
+
+
+def _export_filename(project: Project, format: str) -> str:
+    # Drop characters illegal in Windows/macOS filenames, collapse whitespace,
+    # keep it human-readable; the id keeps it unique + deterministic (so the
+    # reveal endpoint can recompute the exact path without the client passing it).
+    title = re.sub(r'[\\/:*?"<>|\x00-\x1f]+', " ", project.title or "")
+    title = re.sub(r"\s+", " ", title).strip()[:60].strip()
+    return f"{title or 'planforge'}-{project.id}.{format}"
+
+
+def _export_path(project: Project, format: str) -> Path:
+    return Path(settings.export_dir).expanduser() / _export_filename(project, format)
+
+
+def _content_disposition(project: Project, format: str) -> str:
+    # HTTP header values must be latin-1; a Korean title isn't. Send an ASCII
+    # fallback plus an RFC 5987 UTF-8 `filename*` for the human-readable name.
+    nice = _export_filename(project, format)
+    ascii_fallback = f"planforge-{project.id}.{format}"
+    return f"attachment; filename=\"{ascii_fallback}\"; filename*=UTF-8''{quote(nice)}"
+
+
+def _reveal_in_file_manager(path: Path) -> bool:
+    """Open the OS file manager with `path` selected (Finder/Explorer) or its
+    folder (Linux). Best-effort — returns False if the launcher can't spawn."""
+    try:
+        if sys.platform == "darwin":
+            subprocess.Popen(["open", "-R", str(path)])
+        elif sys.platform.startswith("win"):
+            subprocess.Popen(["explorer", "/select,", str(path)])
+        else:
+            subprocess.Popen(["xdg-open", str(path.parent)])
+        return True
+    except Exception:
+        return False
+
+
 @router.get("/{project_id}/export")
 def export_project(
     project_id: int,
@@ -332,38 +409,50 @@ def export_project(
     project = _owned_project(db, project_id, user)
     sections = _ordered_latest_sections(db, project.id)
     assumed = json.loads(project.assumed_stack) if project.assumed_stack else None
-    filename = f"planforge-{project.id}.{format}"
-    disposition = {"Content-Disposition": f'attachment; filename="{filename}"'}
+    disposition = {"Content-Disposition": _content_disposition(project, format)}
 
     if format == "json":
-        return JSONResponse(
-            content={
-                "id": project.id,
-                "title": project.title,
-                "idea": project.idea,
-                "assumedStack": assumed,
-                "sections": [
-                    {"type": s.type, "title": s.title, "markdown": s.markdown, "version": s.version}
-                    for s in sections
-                ],
-            },
-            headers=disposition,
-        )
-
-    lines = [f"# {project.title}", "", f"> {project.idea}", ""]
-    if assumed:
-        lines.append("**가정한 스택**: " + ", ".join(f"{k}={v}" for k, v in assumed.items()))
-        lines.append("")
-    for s in sections:
-        lines.append(f"## {s.title}")
-        lines.append("")
-        lines.append(s.markdown)
-        lines.append("")
+        return JSONResponse(content=_export_json_obj(project, sections, assumed), headers=disposition)
     return Response(
-        content="\n".join(lines),
+        content=_export_markdown(project, sections, assumed),
         media_type="text/markdown; charset=utf-8",
         headers=disposition,
     )
+
+
+@router.post("/{project_id}/export/save")
+def save_export(
+    project_id: int,
+    format: str = Query("md", pattern="^(md|json)$"),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_approved_user),
+):
+    """Write the assembled document to disk (settings.export_dir) and return its
+    path. The Tauri shell ships no fs/dialog plugin, so the local sidecar owns
+    file I/O — the desktop Save .md / .json buttons call this."""
+    project = _owned_project(db, project_id, user)
+    content = _assemble_export(db, project, format)
+    path = _export_path(project, format)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+    return {"path": str(path), "filename": path.name, "format": format}
+
+
+@router.post("/{project_id}/export/reveal")
+def reveal_export(
+    project_id: int,
+    format: str = Query("md", pattern="^(md|json)$"),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_approved_user),
+):
+    """Reveal a previously-saved export in the OS file manager. The path is
+    recomputed server-side from (project, format) — the client never passes a
+    filesystem path."""
+    project = _owned_project(db, project_id, user)
+    path = _export_path(project, format)
+    if not path.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="export_not_saved")
+    return {"revealed": _reveal_in_file_manager(path)}
 
 
 @router.get("", response_model=PageRes)

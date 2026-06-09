@@ -69,6 +69,8 @@ pytest    # Redis/LLM 키 불필요 — 인메모리 큐 + FakeLLMClient
 | 설정 조회/변경 | GET·PUT | `/api/v1/settings` | ✓ | AI 엔진(provider/모델/키) |
 | Ollama 모델 목록 | GET | `/api/v1/settings/ollama/models` | ✓ | 설치 모델 |
 | 문서 내보내기 | GET | `/api/v1/projects/{pid}/export?format=md\|json` | ✓ | 다운로드 |
+| 문서 파일 저장 | POST | `/api/v1/projects/{pid}/export/save?format=md\|json` | ✓ | `{path,filename,format}` (사이드카가 디스크에 기록) |
+| 저장 파일 열기 | POST | `/api/v1/projects/{pid}/export/reveal?format=md\|json` | ✓ | `{revealed}` (탐색기/Finder에서 표시) |
 | 회원 탈퇴 | DELETE | `/api/v1/account` | ✓ | 파기/보관 요약 |
 
 > 생성·재수정은 사용자당 분당 레이트 리밋이 걸려 초과 시 **429 + `Retry-After`**.
