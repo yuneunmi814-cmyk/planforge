@@ -6,7 +6,10 @@ import {
   createProject,
   exportText,
   type ExportFormat,
+  getManualPrompt,
   getProjectDetail,
+  importManual,
+  openChat,
   revealExport,
   saveExport,
   Section,
@@ -31,6 +34,9 @@ export default function Home() {
   const [lastSaved, setLastSaved] = useState<{ format: ExportFormat; path: string } | null>(null);
   const [error, setError] = useState("");
   const [showSettings, setShowSettings] = useState(false);
+  const [manualOpen, setManualOpen] = useState(false);
+  const [pasted, setPasted] = useState("");
+  const [manualMsg, setManualMsg] = useState("");
 
   useEffect(() => {
     waitForBackend()
@@ -95,6 +101,45 @@ export default function Home() {
     await revealExport(projectId, lastSaved.format);
   }
 
+  async function onCopyPrompt() {
+    if (!idea.trim()) return;
+    try {
+      const prompt = await getManualPrompt(idea.trim());
+      await navigator.clipboard.writeText(prompt);
+      setManualMsg(t("manual.copied"));
+    } catch (e) {
+      setManualMsg(t("manual.failed", { msg: String(e) }));
+    }
+  }
+
+  async function onImport() {
+    if (!idea.trim() || !pasted.trim()) return;
+    setManualMsg(t("manual.importing"));
+    try {
+      const r = await importManual(idea.trim(), pasted);
+      if (r.status === "rejected") {
+        setManualMsg(t("manual.rejected", { reason: r.reason ?? "" }));
+        return;
+      }
+      if (r.projectId == null) {
+        setManualMsg(t("manual.failed", { msg: "no project" }));
+        return;
+      }
+      const detail = await getProjectDetail(r.projectId);
+      setSections(detail.sections);
+      setMissing(detail.missingSections);
+      setProjectId(r.projectId);
+      setExportMsg("");
+      setLastSaved(null);
+      setManualMsg("");
+      setManualOpen(false);
+      setPasted("");
+      setPhase("done");
+    } catch (e) {
+      setManualMsg(t("manual.failed", { msg: String(e) }));
+    }
+  }
+
   return (
     <main style={{ maxWidth: 860, margin: "0 auto", padding: "32px 24px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -145,6 +190,40 @@ export default function Home() {
           >
             {phase === "generating" ? t("generate.running", { status }) : t("generate.button")}
           </button>
+
+          <div style={{ marginTop: 10 }}>
+            <button onClick={() => setManualOpen((v) => !v)} style={linkBtn}>
+              {manualOpen ? t("manual.hide") : t("manual.toggle")}
+            </button>
+          </div>
+
+          {manualOpen && (
+            <div style={{ marginTop: 10, padding: 16, borderRadius: 10, background: "#f7f8fa", border: "1px solid #e5e7eb" }}>
+              <p style={{ marginTop: 0, fontSize: 13, color: "#555" }}>{t("manual.intro")}</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
+                <button onClick={onCopyPrompt} disabled={!idea.trim()} style={btn}>{t("manual.copyPrompt")}</button>
+                <span style={{ fontSize: 13, color: "#888" }}>{t("manual.openIn")}</span>
+                <button onClick={() => openChat("chatgpt")} style={btn}>ChatGPT</button>
+                <button onClick={() => openChat("claude")} style={btn}>Claude</button>
+                <button onClick={() => openChat("gemini")} style={btn}>Gemini</button>
+              </div>
+              <textarea
+                value={pasted}
+                onChange={(e) => setPasted(e.target.value)}
+                placeholder={t("manual.pastePlaceholder")}
+                rows={5}
+                style={{ marginTop: 12, width: "100%", padding: 12, fontSize: 14, borderRadius: 8, border: "1px solid #ddd", boxSizing: "border-box", fontFamily: "ui-monospace, monospace" }}
+              />
+              <button
+                onClick={onImport}
+                disabled={!idea.trim() || !pasted.trim()}
+                style={{ marginTop: 8, padding: "10px 20px", fontSize: 15, borderRadius: 8, border: "none", background: !idea.trim() || !pasted.trim() ? "#aaa" : "#1a1a1a", color: "#fff", cursor: "pointer" }}
+              >
+                {t("manual.import")}
+              </button>
+              {manualMsg && <p style={{ fontSize: 13, color: "#555", marginBottom: 0 }}>{manualMsg}</p>}
+            </div>
+          )}
         </>
       )}
 

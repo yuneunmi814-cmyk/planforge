@@ -111,26 +111,73 @@ class OkRes(BaseModel):
     ok: bool = True
 
 
-# ---- Settings (LLM engine: Ollama default / Anthropic optional) ------------
+# ---- Settings (LLM engine: Ollama / Anthropic / OpenAI / Gemini) -----------
 class SettingsRes(BaseModel):
-    llmProvider: str  # ollama | anthropic | fake
+    llmProvider: str  # ollama | anthropic | openai | gemini | fake
     ollamaBaseUrl: str
     ollamaModel: str
     anthropicModel: str
     hasAnthropicKey: bool
     anthropicKeyMasked: str  # e.g. "••••abcd", never the full key
+    openaiModel: str
+    hasOpenaiKey: bool
+    openaiKeyMasked: str
+    geminiModel: str
+    hasGeminiKey: bool
+    geminiKeyMasked: str
 
 
 class SettingsUpdateReq(BaseModel):
-    llmProvider: Literal["ollama", "anthropic", "fake"] | None = None
+    llmProvider: Literal["ollama", "anthropic", "openai", "gemini", "fake"] | None = None
     ollamaBaseUrl: str | None = None
     ollamaModel: str | None = None
     anthropicApiKey: str | None = None
     anthropicModel: str | None = None
+    openaiApiKey: str | None = None
+    openaiModel: str | None = None
+    geminiApiKey: str | None = None
+    geminiModel: str | None = None
 
 
 class OllamaPullReq(BaseModel):
     model: str | None = None  # defaults to the configured ollamaModel
+
+
+# ---- Manual handoff (bring-your-own ChatGPT/Claude/Gemini, no API key) ------
+class ManualPromptReq(BaseModel):
+    """Same fields as project creation — but we only assemble the prompt text;
+    no project is created and no LLM is called."""
+
+    idea: str = Field(min_length=1, max_length=2000)
+    frontend: str | None = None
+    backend: str | None = None
+    db: str | None = None
+    auth: str | None = None
+
+
+class ManualPromptRes(BaseModel):
+    prompt: str  # the full pastable text: system prompt + input contract
+    promptVersion: str
+
+
+class ManualImportReq(BaseModel):
+    idea: str = Field(min_length=1, max_length=2000)
+    text: str = Field(min_length=1, max_length=200_000)  # the pasted model output
+    title: str | None = Field(default=None, max_length=255)
+    frontend: str | None = None
+    backend: str | None = None
+    db: str | None = None
+    auth: str | None = None
+
+
+class ManualImportRes(BaseModel):
+    status: str  # success | rejected
+    projectId: int | None = None  # set on success; None when the model rejected
+    reason: str | None = None  # set when status == rejected
+
+
+class OpenChatReq(BaseModel):
+    provider: Literal["chatgpt", "claude", "gemini"]
 
 
 # ---- Account (PF-5) --------------------------------------------------------

@@ -142,13 +142,27 @@ export async function revealExport(projectId: number, format: ExportFormat): Pro
 }
 
 // --- Settings (LLM engine) -------------------------------------------------
+export type LlmProvider = "ollama" | "anthropic" | "openai" | "gemini" | "fake";
+
 export type Settings = {
-  llmProvider: "ollama" | "anthropic" | "fake";
+  llmProvider: LlmProvider;
   ollamaBaseUrl: string;
   ollamaModel: string;
   anthropicModel: string;
   hasAnthropicKey: boolean;
   anthropicKeyMasked: string;
+  openaiModel: string;
+  hasOpenaiKey: boolean;
+  openaiKeyMasked: string;
+  geminiModel: string;
+  hasGeminiKey: boolean;
+  geminiKeyMasked: string;
+};
+
+export type SettingsPatch = Partial<Settings> & {
+  anthropicApiKey?: string;
+  openaiApiKey?: string;
+  geminiApiKey?: string;
 };
 
 export async function getSettings(): Promise<Settings> {
@@ -156,10 +170,32 @@ export async function getSettings(): Promise<Settings> {
   return res.json();
 }
 
-export async function updateSettings(patch: Partial<Settings> & { anthropicApiKey?: string }): Promise<Settings> {
+export async function updateSettings(patch: SettingsPatch): Promise<Settings> {
   const res = await authedFetch("/settings", { method: "PUT", body: JSON.stringify(patch) });
   if (!res.ok) throw new Error((await res.json())?.error?.message ?? "설정 저장 실패");
   return res.json();
+}
+
+// --- Manual handoff (bring your own ChatGPT/Claude/Gemini, no API key) ------
+/** Build the full prompt to paste into the user's own chat (no LLM call). */
+export async function getManualPrompt(idea: string): Promise<string> {
+  const res = await authedFetch("/manual/prompt", { method: "POST", body: JSON.stringify({ idea }) });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error?.message ?? "프롬프트 생성 실패");
+  return (await res.json()).prompt as string;
+}
+
+export type ManualImport = { status: "success" | "rejected"; projectId: number | null; reason: string | null };
+
+/** Import a pasted chat response → parses it into a project (or a rejection). */
+export async function importManual(idea: string, text: string): Promise<ManualImport> {
+  const res = await authedFetch("/manual/import", { method: "POST", body: JSON.stringify({ idea, text }) });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error?.message ?? "결과 가져오기 실패");
+  return res.json();
+}
+
+/** Open a provider's chat in the user's default browser (where they're logged in). */
+export async function openChat(provider: "chatgpt" | "claude" | "gemini"): Promise<void> {
+  await authedFetch("/manual/open-chat", { method: "POST", body: JSON.stringify({ provider }) });
 }
 
 export async function listOllamaModels(): Promise<{ available: boolean; models: string[] }> {

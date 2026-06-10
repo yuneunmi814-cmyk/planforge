@@ -16,7 +16,7 @@ from app.core.config import get_settings
 settings = get_settings()
 
 # Field names are camelCase to match the JSON API surface directly.
-PROVIDERS = ("ollama", "anthropic", "fake")
+PROVIDERS = ("ollama", "anthropic", "openai", "gemini", "fake")
 
 
 def _defaults() -> dict:
@@ -28,6 +28,10 @@ def _defaults() -> dict:
         "ollamaModel": settings.ollama_model,
         "anthropicApiKey": settings.anthropic_api_key or "",
         "anthropicModel": settings.llm_model,
+        "openaiApiKey": settings.openai_api_key or "",
+        "openaiModel": settings.openai_model,
+        "geminiApiKey": settings.gemini_api_key or "",
+        "geminiModel": settings.gemini_model,
     }
 
 

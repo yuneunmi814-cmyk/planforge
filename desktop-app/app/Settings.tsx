@@ -20,7 +20,9 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
 
   if (!s) return <Card>{t("settings.loading")}</Card>;
 
-  async function save(patch: Partial<Settings> & { anthropicApiKey?: string }) {
+  async function save(
+    patch: Partial<Settings> & { anthropicApiKey?: string; openaiApiKey?: string; geminiApiKey?: string },
+  ) {
     setError("");
     try {
       const next = await updateSettings(patch);
@@ -43,12 +45,18 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
       <p style={{ color: "#666", fontSize: 13 }}>{t("settings.intro")}</p>
 
       <label style={lbl}>{t("settings.engine")}</label>
-      <div style={{ display: "flex", gap: 8 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
         <Choice active={s.llmProvider === "ollama"} onClick={() => save({ llmProvider: "ollama" })}>
           {t("settings.engine.ollama")}
         </Choice>
         <Choice active={s.llmProvider === "anthropic"} onClick={() => save({ llmProvider: "anthropic" })}>
           {t("settings.engine.anthropic")}
+        </Choice>
+        <Choice active={s.llmProvider === "openai"} onClick={() => save({ llmProvider: "openai" })}>
+          {t("settings.engine.openai")}
+        </Choice>
+        <Choice active={s.llmProvider === "gemini"} onClick={() => save({ llmProvider: "gemini" })}>
+          {t("settings.engine.gemini")}
         </Choice>
       </div>
 
@@ -92,6 +100,62 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
             </button>
           </div>
           <p style={{ color: "#888", fontSize: 12 }}>{t("settings.key.note")}</p>
+        </>
+      )}
+
+      {s.llmProvider === "openai" && (
+        <>
+          <label style={lbl}>{t("settings.model")}</label>
+          <input
+            defaultValue={s.openaiModel}
+            onBlur={(e) => e.target.value && save({ openaiModel: e.target.value })}
+            style={input}
+          />
+          <label style={lbl}>
+            {t("settings.key")}{" "}
+            ({s.hasOpenaiKey ? t("settings.key.saved", { masked: s.openaiKeyMasked }) : t("settings.key.unset")})
+          </label>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              type="password"
+              placeholder="sk-…"
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+              style={{ ...input, flex: 1 }}
+            />
+            <button onClick={() => save({ openaiApiKey: key })} disabled={!key} style={primaryBtn}>
+              {t("settings.key.save")}
+            </button>
+          </div>
+          <p style={{ color: "#888", fontSize: 12 }}>{t("settings.key.apiNote")}</p>
+        </>
+      )}
+
+      {s.llmProvider === "gemini" && (
+        <>
+          <label style={lbl}>{t("settings.model")}</label>
+          <input
+            defaultValue={s.geminiModel}
+            onBlur={(e) => e.target.value && save({ geminiModel: e.target.value })}
+            style={input}
+          />
+          <label style={lbl}>
+            {t("settings.key")}{" "}
+            ({s.hasGeminiKey ? t("settings.key.saved", { masked: s.geminiKeyMasked }) : t("settings.key.unset")})
+          </label>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              type="password"
+              placeholder="AIza…"
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+              style={{ ...input, flex: 1 }}
+            />
+            <button onClick={() => save({ geminiApiKey: key })} disabled={!key} style={primaryBtn}>
+              {t("settings.key.save")}
+            </button>
+          </div>
+          <p style={{ color: "#888", fontSize: 12 }}>{t("settings.key.apiNote")}</p>
         </>
       )}
 

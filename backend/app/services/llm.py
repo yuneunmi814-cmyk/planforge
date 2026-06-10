@@ -77,6 +77,71 @@ class OllamaClient:
         return resp.json()["message"]["content"]
 
 
+class OpenAIClient:
+    """Cloud engine via the OpenAI Chat Completions API. Requires an OpenAI API
+    key (platform.openai.com) — note this is billed per token, separate from any
+    ChatGPT subscription. response_format=json_object nudges valid contract JSON."""
+
+    def __init__(self, api_key: str, model: str) -> None:
+        self._api_key = api_key
+        self._model = model
+
+    def complete(self, *, system: str, user: str, temperature: float, max_tokens: int) -> str:
+        import httpx
+
+        resp = httpx.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers={"Authorization": f"Bearer {self._api_key}"},
+            json={
+                "model": self._model,
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+                "response_format": {"type": "json_object"},
+            },
+            timeout=settings.llm_http_timeout_seconds,
+        )
+        resp.raise_for_status()
+        return resp.json()["choices"][0]["message"]["content"]
+
+
+class GeminiClient:
+    """Cloud engine via Google's Generative Language API. Requires an AI Studio
+    API key (separate from a Gemini Advanced subscription). The key goes in the
+    x-goog-api-key header (never the URL) and responseMimeType pins JSON output."""
+
+    def __init__(self, api_key: str, model: str) -> None:
+        self._api_key = api_key
+        self._model = model
+
+    def complete(self, *, system: str, user: str, temperature: float, max_tokens: int) -> str:
+        import httpx
+
+        resp = httpx.post(
+            f"https://generativelanguage.googleapis.com/v1beta/models/{self._model}:generateContent",
+            headers={"x-goog-api-key": self._api_key},
+            json={
+                "systemInstruction": {"parts": [{"text": system}]},
+                "contents": [{"role": "user", "parts": [{"text": user}]}],
+                "generationConfig": {
+                    "temperature": temperature,
+                    "maxOutputTokens": max_tokens,
+                    "responseMimeType": "application/json",
+                },
+            },
+            timeout=settings.llm_http_timeout_seconds,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        return "".join(
+            part.get("text", "")
+            for part in data["candidates"][0]["content"]["parts"]
+        )
+
+
 class FakeLLMClient:
     """Deterministic stub. Honours the security contract enough to be useful in
     tests: hostile/empty ideas are rejected, everything else yields 9 sections."""
@@ -168,6 +233,10 @@ def _build_from_config() -> LLMClient:
     provider = cfg.get("llmProvider")
     if provider == "anthropic" and cfg.get("anthropicApiKey"):
         return AnthropicClient(cfg["anthropicApiKey"], cfg.get("anthropicModel") or settings.llm_model)
+    if provider == "openai" and cfg.get("openaiApiKey"):
+        return OpenAIClient(cfg["openaiApiKey"], cfg.get("openaiModel") or settings.openai_model)
+    if provider == "gemini" and cfg.get("geminiApiKey"):
+        return GeminiClient(cfg["geminiApiKey"], cfg.get("geminiModel") or settings.gemini_model)
     if provider == "ollama":
         return OllamaClient(cfg.get("ollamaBaseUrl") or settings.ollama_base_url, cfg.get("ollamaModel") or settings.ollama_model)
     return FakeLLMClient()

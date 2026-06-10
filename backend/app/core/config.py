@@ -54,6 +54,15 @@ class Settings(BaseSettings):
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "llama3.1"
     ollama_timeout_seconds: int = 180
+
+    # OpenAI (ChatGPT API — separate from a ChatGPT subscription; pay-per-token).
+    openai_api_key: str | None = None
+    openai_model: str = "gpt-4o"
+    # Google Gemini (AI Studio API key — separate from Gemini Advanced).
+    gemini_api_key: str | None = None
+    gemini_model: str = "gemini-1.5-pro"
+    # Shared HTTP timeout for the cloud REST engines (OpenAI/Gemini).
+    llm_http_timeout_seconds: int = 120
     # Design §8: planning docs favour consistency over creativity, big output.
     llm_temperature: float = 0.4
     llm_max_tokens: int = 8192

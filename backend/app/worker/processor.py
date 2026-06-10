@@ -169,18 +169,30 @@ def _call_with_retries(
 
 
 # --- parsing ----------------------------------------------------------------
+def _try_json(text: str) -> dict | None:
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return None
+
+
 def _load_json(raw: str) -> dict:
-    """Parse the LLM output into a dict, tolerating a stray code fence."""
+    """Parse the LLM output into a dict, tolerating a stray code fence and — for
+    chatty models / pasted chat output — surrounding prose around the JSON."""
     text = raw.strip()
     if text.startswith("```"):
         text = text.split("\n", 1)[-1] if "\n" in text else text
         if text.endswith("```"):
             text = text[:-3]
         text = text.strip()
-    try:
-        data = json.loads(text)
-    except json.JSONDecodeError as exc:
-        raise OutputContractError(f"JSON 파싱 실패: {exc}") from exc
+    data = _try_json(text)
+    if data is None:
+        # Fall back to the outermost {...} block (handles leading/trailing prose).
+        start, end = text.find("{"), text.rfind("}")
+        if start != -1 and end > start:
+            data = _try_json(text[start : end + 1])
+    if data is None:
+        raise OutputContractError("JSON 파싱 실패")
     if not isinstance(data, dict) or "status" not in data:
         raise OutputContractError("status 필드가 없습니다.")
     return data

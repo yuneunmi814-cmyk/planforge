@@ -30,14 +30,22 @@ def _mask(key: str) -> str:
 
 
 def _to_res(cfg: dict) -> SettingsRes:
-    key = cfg.get("anthropicApiKey") or ""
+    anthropic_key = cfg.get("anthropicApiKey") or ""
+    openai_key = cfg.get("openaiApiKey") or ""
+    gemini_key = cfg.get("geminiApiKey") or ""
     return SettingsRes(
         llmProvider=cfg["llmProvider"],
         ollamaBaseUrl=cfg["ollamaBaseUrl"],
         ollamaModel=cfg["ollamaModel"],
         anthropicModel=cfg["anthropicModel"],
-        hasAnthropicKey=bool(key),
-        anthropicKeyMasked=_mask(key),
+        hasAnthropicKey=bool(anthropic_key),
+        anthropicKeyMasked=_mask(anthropic_key),
+        openaiModel=cfg["openaiModel"],
+        hasOpenaiKey=bool(openai_key),
+        openaiKeyMasked=_mask(openai_key),
+        geminiModel=cfg["geminiModel"],
+        hasGeminiKey=bool(gemini_key),
+        geminiKeyMasked=_mask(gemini_key),
     )
 
 

@@ -5,7 +5,7 @@ from app.core.config import get_settings
 from app.core.database import Base, engine
 from app.core.errors import register_error_handlers
 from app.core import i18n
-from app.routers import account, admin, auth, projects, settings as settings_router, usage
+from app.routers import account, admin, auth, manual, projects, settings as settings_router, usage
 
 settings = get_settings()
 
@@ -46,6 +46,7 @@ app.include_router(admin.router)
 app.include_router(usage.router)
 app.include_router(account.router)
 app.include_router(settings_router.router)
+app.include_router(manual.router)
 
 
 @app.get("/health", tags=["meta"])
