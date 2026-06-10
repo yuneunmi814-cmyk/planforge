@@ -8,8 +8,9 @@
     "build": "next build",
     "start": "next start",
     "tauri": "tauri",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "prepare:tauri": "node scripts/tauri-prereqs.mjs",
+    "tauri:dev": "node scripts/tauri-prereqs.mjs dev && tauri dev",
+    "tauri:build": "node scripts/tauri-prereqs.mjs build && tauri build"
   },
   "dependencies": {
     "next": "^15.0.0",

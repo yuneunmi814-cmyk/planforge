@@ -90,7 +90,18 @@ PlanForge needs a language model. Two options — choose in **⚙ Settings**:
 Prereqs: **Node 18+**, **Rust** ([Tauri prerequisites](https://tauri.app/start/prerequisites/)), **Python 3.12**.
 
 ```bash
-# dev (backend runs from system Python; hot reload)
+# 1) Backend deps. In dev, Tauri runs the backend with `python -m uvicorn`, so a
+#    `python` on PATH that can import the backend is required. A venv is the easiest
+#    way — it also provides a `python` shim (some installs only ship `python3`).
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate            # Windows: .venv\Scripts\activate
+pip install -r requirements-dev.txt
+cd ..
+
+# 2) Run. The first `npm run tauri:dev` auto-generates the app icons and a
+#    placeholder sidecar (both gitignored), so there's no manual `tauri icon` or
+#    PyInstaller step. Keep the venv activated in this shell so `python` resolves.
 cd desktop-app
 npm install
 npm run tauri:dev

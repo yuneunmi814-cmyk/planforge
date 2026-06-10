@@ -42,16 +42,26 @@ desktop/planforge/
 dev 모드는 PyInstaller 없이 **시스템 파이썬으로 백엔드를 직접** 띄웁니다(`src-tauri/src/lib.rs`의 분기).
 
 ```bash
-cd desktop/planforge/desktop-app
-npm install
+# 1) 백엔드 의존성 — dev는 `python -m uvicorn` 으로 백엔드를 띄우므로,
+#    백엔드를 import할 수 있는 `python` 이 PATH에 있어야 합니다. venv가 가장 간단합니다
+#    (venv는 `python` 심볼릭 링크도 제공 — 일부 환경은 `python3`만 있음).
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
+pip install -r requirements-dev.txt
+cd ../desktop-app
 
-# 백엔드가 import되도록 파이썬 의존성 준비(상위 backend 기준)
-#   pip install -r ../backend/requirements.txt
+# 2) 실행. 첫 `npm run tauri:dev` 가 아이콘과 사이드카 플레이스홀더를 자동 생성합니다
+#    (둘 다 gitignore 대상 → 클린 클론에 없음). `tauri icon`/PyInstaller 수동 단계 불필요.
+#    `python` 이 잡히도록 위 venv를 활성화한 셸에서 실행하세요.
+npm install
 npm run tauri:dev
 ```
 
 > dev는 `python -m uvicorn app.main:app --app-dir ../../backend` 를 자동 실행합니다.
-> 파이썬/venv가 PATH에 잡혀 있어야 합니다(필요시 venv 활성화 후 실행).
+> 빌드 직전 `scripts/tauri-prereqs.mjs` 가 `src-tauri/icons/` 와 사이드카 플레이스홀더
+> (`binaries/planforge-backend-<triple>`)를 점검·생성해 클린 클론에서도 바로 뜹니다.
+> dev에서 사이드카 플레이스홀더는 **실행되지 않고**, `externalBin` 리소스 체크만 통과시킵니다.
 
 ## 로컬 프로덕션 빌드 (.dmg / .exe 만들기)
 
@@ -67,12 +77,15 @@ mkdir -p ../desktop-app/src-tauri/binaries
 cp dist/planforge-backend "../desktop-app/src-tauri/binaries/planforge-backend-$TRIPLE"
 #   (Windows: dist/planforge-backend.exe → ...-$TRIPLE.exe)
 
-# 3) 아이콘 생성 + 앱 빌드
+# 3) 앱 빌드 (아이콘은 빌드 직전 자동 생성)
 cd ../desktop-app
 npm install
-npm run tauri icon app-icon.png         # → src-tauri/icons/*
 npm run tauri:build                      # → src-tauri/target/release/bundle/
 ```
+
+> `npm run tauri:build` 는 빌드 전에 `scripts/tauri-prereqs.mjs build` 를 실행해
+> 아이콘을 자동 생성하고, 사이드카가 **없거나 dev 플레이스홀더면 빌드를 중단**합니다
+> (스텁이 든 깨진 설치본 방지). 따라서 1~2단계의 **실제** 사이드카 배치가 필수입니다.
 
 산출물: macOS `…/bundle/dmg/*.dmg`, Windows `…/bundle/nsis/*-setup.exe`.
 
