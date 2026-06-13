@@ -19,8 +19,6 @@ import {
 } from "./lib/backend";
 import { useI18n } from "./lib/i18n";
 
-const TOTAL_SECTIONS = 9;
-
 type Phase = "booting" | "ready" | "generating" | "done" | "error";
 
 export default function Home() {
@@ -230,7 +228,7 @@ export default function Home() {
 
       {missing.length > 0 && (
         <Banner tone="warn">
-          {t("generate.partial", { got: TOTAL_SECTIONS - missing.length, total: TOTAL_SECTIONS })}
+          {t("generate.partial", { got: sections.length, total: sections.length + missing.length })}
         </Banner>
       )}
 

@@ -11,7 +11,7 @@
 ====================
 [입력 형식]
 ====================
-[섹션 타입] {section_type}   (overview / user_flow / admin_flow / db_schema / security / privacy_law / api_spec / architecture / crud_mapping 중 하나)
+[섹션 타입] {section_type}   (overview / user_flow / admin_flow / db_schema / security / privacy_law / api_spec / architecture / crud_mapping / nfr / testing / deployment / risks 중 하나)
 [프로젝트 스택] frontend={frontend}, backend={backend}, db={db}, auth={auth}
 
 <current_content>

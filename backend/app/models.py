@@ -25,6 +25,11 @@ SECTION_TYPES = (
     "api_spec",
     "architecture",
     "crud_mapping",
+    # Production-grade sections (top-tier design doc).
+    "nfr",
+    "testing",
+    "deployment",
+    "risks",
 )
 
 
