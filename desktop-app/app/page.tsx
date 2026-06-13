@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Markdown from "./Markdown";
 import SettingsPanel from "./Settings";
 import {
   createProject,
@@ -252,9 +253,7 @@ export default function Home() {
       {sections.map((s) => (
         <section key={s.type} style={{ marginTop: 24 }}>
           <h2 style={{ fontSize: 18, borderBottom: "1px solid #eee", paddingBottom: 6 }}>{s.title}</h2>
-          <pre style={{ whiteSpace: "pre-wrap", fontFamily: "inherit", fontSize: 14, lineHeight: 1.6 }}>
-            {s.markdown}
-          </pre>
+          <Markdown>{s.markdown}</Markdown>
         </section>
       ))}
     </main>
