@@ -49,8 +49,8 @@ const DICT: Record<string, { en: string; ko: string }> = {
   },
   "manual.hide": { en: "Hide manual mode", ko: "직접 모드 닫기" },
   "manual.intro": {
-    en: "Copy the prompt, paste it into your own chat (where you're already subscribed), then paste the reply back here — PlanForge parses it into the 9 sections. No key, no extra cost.",
-    ko: "프롬프트를 복사해 (이미 구독 중인) 내 챗에 붙여넣고, 받은 답변을 여기 다시 붙여넣으면 PlanForge가 9개 섹션으로 정리합니다. 키도 추가 비용도 없습니다.",
+    en: "Copy the prompt, paste it into your own chat (where you're already subscribed), then paste the reply back here — PlanForge parses it into the 13 sections. No key, no extra cost.",
+    ko: "프롬프트를 복사해 (이미 구독 중인) 내 챗에 붙여넣고, 받은 답변을 여기 다시 붙여넣으면 PlanForge가 13개 섹션으로 정리합니다. 키도 추가 비용도 없습니다.",
   },
   "manual.copyPrompt": { en: "1) Copy prompt", ko: "1) 프롬프트 복사" },
   "manual.openIn": { en: "open in:", ko: "또는 열기:" },
