@@ -52,7 +52,7 @@ Pick an AI engine in ⚙ Settings:
 - **Anthropic** (cloud): paste your API key (stored locally)
 
 ### Highlights
-- 9-section spec generation with live progress
+- 13-section spec generation with live progress
 - Per-section refine, Markdown/JSON export
 - KO/EN toggle
 ```

@@ -20,7 +20,7 @@ def _drain():
 def test_full_generation_reports_nothing_missing(client):
     headers = auth_headers(client)
     pid = client.post("/api/v1/projects", json={"idea": "헬스장 SaaS"}, headers=headers).json()["projectId"]
-    _drain()  # FakeLLM emits all 9 sections
+    _drain()  # FakeLLM emits all 13 sections
     body = client.get(f"/api/v1/projects/{pid}", headers=headers).json()
     assert body["missingSections"] == []
 

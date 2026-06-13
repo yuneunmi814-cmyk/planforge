@@ -59,6 +59,23 @@ def test_refine_bumps_only_target_section_version(client):
     assert after_security["markdown"] == before_security["markdown"]
 
 
+def test_refine_keeps_canonical_section_order(client):
+    """A refined section gets a new (highest) row id; the project view must still
+    return sections in canonical SECTION_TYPES order, not insertion order."""
+    from app.models import SECTION_TYPES
+
+    headers = auth_headers(client)
+    pid = _generate_project(client, headers)
+    client.post(
+        f"/api/v1/projects/{pid}/sections/overview/refine",
+        json={"userRequest": "타깃 사용자를 더 구체적으로"},
+        headers=headers,
+    )
+    _drain_queue()
+    body = client.get(f"/api/v1/projects/{pid}", headers=headers).json()
+    assert [s["type"] for s in body["sections"]] == list(SECTION_TYPES)
+
+
 def test_refine_hostile_request_rejected_and_section_unchanged(client):
     headers = auth_headers(client)
     pid = _generate_project(client, headers)

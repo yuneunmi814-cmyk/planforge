@@ -36,7 +36,7 @@ def test_manual_import_creates_project_with_all_sections(client):
     body = res.json()
     assert body["status"] == "success"
     pid = body["projectId"]
-    # The imported project renders like any other: all 9 sections in spec order.
+    # The imported project renders like any other: all 13 sections in spec order.
     detail = client.get(f"/api/v1/projects/{pid}", headers=headers).json()
     assert [s["type"] for s in detail["sections"]] == list(SECTION_TYPES)
     # Export works on it too (it's a normal project).

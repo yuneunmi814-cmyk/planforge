@@ -144,7 +144,7 @@ class GeminiClient:
 
 class FakeLLMClient:
     """Deterministic stub. Honours the security contract enough to be useful in
-    tests: hostile/empty ideas are rejected, everything else yields 9 sections."""
+    tests: hostile/empty ideas are rejected, everything else yields 13 sections."""
 
     _REJECT_MARKERS = ("이전 지시 무시", "ignore previous", "system prompt", "프롬프트 출력")
 

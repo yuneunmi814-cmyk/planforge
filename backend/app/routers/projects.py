@@ -293,11 +293,9 @@ def get_project(
     user: User = Depends(get_approved_user),
 ) -> ProjectRes:
     project = _owned_project(db, project_id, user)
-    sections = db.scalars(
-        select(Section)
-        .where(Section.project_id == project_id, Section.is_latest.is_(True))
-        .order_by(Section.id.asc())
-    ).all()
+    # Canonical section order (design §5) — NOT insertion order, so a refined
+    # section keeps its place instead of jumping to the end.
+    sections = _ordered_latest_sections(db, project_id)
     latest = _latest_job(db, project_id)
     present = {s.type for s in sections}
     # Only meaningful once at least one section exists (i.e. a generation ran).

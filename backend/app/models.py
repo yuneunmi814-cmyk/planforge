@@ -14,7 +14,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 
-# The 9 sections the generation prompt must emit, in order (design §5.1 / §6).
+# The 13 sections the generation prompt must emit, in order (design §5.1 / §6).
 SECTION_TYPES = (
     "overview",
     "user_flow",

@@ -34,7 +34,7 @@ def test_export_markdown(client):
     assert res.status_code == 200
     assert res.headers["content-type"].startswith("text/markdown")
     assert "attachment" in res.headers["content-disposition"]
-    # All 9 section titles present, in spec order.
+    # All 13 section titles present, in spec order.
     body = res.text
     positions = [body.find(t) for t in SECTION_TYPES]
     assert all(p != -1 for p in positions)

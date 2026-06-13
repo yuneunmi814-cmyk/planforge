@@ -3,7 +3,7 @@
 Separated from the queue loop so it can be unit-tested directly. `process_job`
 dispatches by job kind:
 
-  - generate: system prompt + input contract → LLM → parse 9-section output
+  - generate: system prompt + input contract → LLM → parse 13-section output
     contract → store each section as a new latest version.
   - refine:   refine prompt + current section → LLM → parse single-section
     output → store a new version of just that section.
