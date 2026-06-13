@@ -11,6 +11,7 @@ import {
   getProjectDetail,
   importManual,
   openChat,
+  refineSection,
   revealExport,
   saveExport,
   Section,
@@ -38,6 +39,10 @@ export default function Home() {
   const [manualOpen, setManualOpen] = useState(false);
   const [pasted, setPasted] = useState("");
   const [manualMsg, setManualMsg] = useState("");
+  const [refineOpen, setRefineOpen] = useState<string | null>(null);
+  const [refineText, setRefineText] = useState("");
+  const [refineBusy, setRefineBusy] = useState<string | null>(null);
+  const [refineMsg, setRefineMsg] = useState("");
 
   useEffect(() => {
     waitForBackend()
@@ -56,6 +61,9 @@ export default function Home() {
     setProgress([]);
     setExportMsg("");
     setLastSaved(null);
+    setRefineOpen(null);
+    setRefineText("");
+    setRefineMsg("");
     setPhase("generating");
     try {
       const { projectId: pid, jobId } = await createProject(idea.trim());
@@ -117,6 +125,29 @@ export default function Home() {
   async function onReveal() {
     if (projectId == null || !lastSaved) return;
     await revealExport(projectId, lastSaved.format);
+  }
+
+  async function onRefine(sectionType: string) {
+    if (projectId == null || !refineText.trim()) return;
+    setRefineMsg("");
+    setRefineBusy(sectionType);
+    try {
+      const jobId = await refineSection(projectId, sectionType, refineText.trim());
+      const final = await waitForJob(projectId, jobId);
+      if (final !== "success") {
+        setRefineMsg(t("refine.result", { status: final }));
+        return;
+      }
+      const detail = await getProjectDetail(projectId);
+      setSections(detail.sections);
+      setMissing(detail.missingSections);
+      setRefineOpen(null);
+      setRefineText("");
+    } catch (e) {
+      setRefineMsg(t("refine.failed", { msg: String(e) }));
+    } finally {
+      setRefineBusy(null);
+    }
   }
 
   async function onCopyPrompt() {
@@ -275,8 +306,51 @@ export default function Home() {
 
       {sections.map((s) => (
         <section key={s.type} style={{ marginTop: 24 }}>
-          <h2 style={{ fontSize: 18, borderBottom: "1px solid #eee", paddingBottom: 6 }}>{s.title}</h2>
-          <Markdown>{s.markdown}</Markdown>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", borderBottom: "1px solid #eee", paddingBottom: 6 }}>
+            <h2 style={{ fontSize: 18, margin: 0 }}>{s.title}</h2>
+            {phase === "done" && (
+              <button
+                onClick={() => {
+                  setRefineOpen(refineOpen === s.type ? null : s.type);
+                  setRefineText("");
+                  setRefineMsg("");
+                }}
+                style={linkBtn}
+              >
+                {refineOpen === s.type ? t("refine.cancel") : t("refine.button")}
+              </button>
+            )}
+          </div>
+          {refineOpen === s.type && (
+            <div style={{ margin: "10px 0", padding: 12, background: "#f7f8fa", border: "1px solid #e5e7eb", borderRadius: 8 }}>
+              <textarea
+                value={refineText}
+                onChange={(e) => setRefineText(e.target.value)}
+                placeholder={t("refine.placeholder")}
+                rows={2}
+                disabled={refineBusy === s.type}
+                style={{ width: "100%", padding: 10, fontSize: 14, borderRadius: 6, border: "1px solid #ddd", boxSizing: "border-box" }}
+              />
+              <div style={{ marginTop: 8, display: "flex", gap: 8, alignItems: "center" }}>
+                <button
+                  onClick={() => onRefine(s.type)}
+                  disabled={refineBusy === s.type || !refineText.trim()}
+                  style={{
+                    ...btn,
+                    border: "none",
+                    background: refineBusy === s.type || !refineText.trim() ? "#ccc" : "#1a1a1a",
+                    color: "#fff",
+                  }}
+                >
+                  {refineBusy === s.type ? t("refine.busy") : t("refine.apply")}
+                </button>
+                {refineMsg && <span style={{ fontSize: 13, color: "#b3261e" }}>{refineMsg}</span>}
+              </div>
+            </div>
+          )}
+          <div style={{ marginTop: 12 }}>
+            <Markdown>{s.markdown}</Markdown>
+          </div>
         </section>
       ))}
     </main>

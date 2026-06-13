@@ -92,6 +92,20 @@ export async function createProject(idea: string): Promise<{ projectId: number; 
   return { projectId: j.projectId, jobId: j.jobId };
 }
 
+/** Refine a single section (async) → returns the refine jobId. */
+export async function refineSection(
+  projectId: number,
+  sectionType: string,
+  userRequest: string,
+): Promise<number> {
+  const res = await authedFetch(`/projects/${projectId}/sections/${sectionType}/refine`, {
+    method: "POST",
+    body: JSON.stringify({ userRequest }),
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error?.message ?? "재수정 요청 실패");
+  return (await res.json()).jobId as number;
+}
+
 /** Poll a job until it reaches a terminal state. */
 export async function waitForJob(
   projectId: number,

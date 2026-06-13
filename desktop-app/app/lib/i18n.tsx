@@ -20,6 +20,18 @@ const DICT: Record<string, { en: string; ko: string }> = {
   },
   "nav.settings": { en: "Settings", ko: "설정" },
 
+  // Per-section refine
+  "refine.button": { en: "Rewrite this section", ko: "이 섹션 다시 쓰기" },
+  "refine.cancel": { en: "Cancel", ko: "취소" },
+  "refine.placeholder": {
+    en: "How should it change? e.g. add a cost column to the table",
+    ko: "어떻게 고칠까요? 예: 표에 비용 컬럼 추가, 더 구체적인 수치로",
+  },
+  "refine.apply": { en: "Apply", ko: "적용" },
+  "refine.busy": { en: "Rewriting…", ko: "수정 중…" },
+  "refine.result": { en: "Result: {status}", ko: "수정 결과: {status}" },
+  "refine.failed": { en: "Failed: {msg}", ko: "실패: {msg}" },
+
   // Export / download
   "export.copy": { en: "Copy Markdown", ko: "마크다운 복사" },
   "export.saveMd": { en: "Save .md", ko: ".md로 저장" },
