@@ -107,6 +107,42 @@ export async function waitForJob(
   }
 }
 
+export type JobEvent = { type: string; jobId: number; section?: string; error?: string };
+
+/** Stream a job's progress events (SSE) via fetch — uses the Authorization
+ * header (so the token never goes in the URL). Calls onEvent per event and
+ * resolves when the stream closes (terminal event or server cap). */
+export async function streamJobEvents(
+  projectId: number,
+  jobId: number,
+  onEvent: (ev: JobEvent) => void,
+): Promise<void> {
+  const res = await authedFetch(`/projects/${projectId}/jobs/${jobId}/events`);
+  if (!res.ok || !res.body) throw new Error("이벤트 스트림을 열지 못했습니다.");
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buf = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let idx: number;
+    // SSE frames are separated by a blank line.
+    while ((idx = buf.indexOf("\n\n")) >= 0) {
+      const frame = buf.slice(0, idx);
+      buf = buf.slice(idx + 2);
+      const dataLine = frame.split("\n").find((l) => l.startsWith("data:"));
+      if (dataLine) {
+        try {
+          onEvent(JSON.parse(dataLine.slice(5).trim()));
+        } catch {
+          /* ignore comments/heartbeats */
+        }
+      }
+    }
+  }
+}
+
 export type ProjectDetail = { sections: Section[]; missingSections: string[] };
 
 export async function getProjectDetail(projectId: number): Promise<ProjectDetail> {

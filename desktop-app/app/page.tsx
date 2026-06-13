@@ -14,6 +14,7 @@ import {
   revealExport,
   saveExport,
   Section,
+  streamJobEvents,
   waitForBackend,
   waitForJob,
 } from "./lib/backend";
@@ -29,6 +30,7 @@ export default function Home() {
   const [sections, setSections] = useState<Section[]>([]);
   const [missing, setMissing] = useState<string[]>([]);
   const [projectId, setProjectId] = useState<number | null>(null);
+  const [progress, setProgress] = useState<string[]>([]);
   const [exportMsg, setExportMsg] = useState("");
   const [lastSaved, setLastSaved] = useState<{ format: ExportFormat; path: string } | null>(null);
   const [error, setError] = useState("");
@@ -51,21 +53,38 @@ export default function Home() {
     setSections([]);
     setMissing([]);
     setProjectId(null);
+    setProgress([]);
     setExportMsg("");
     setLastSaved(null);
     setPhase("generating");
     try {
       const { projectId: pid, jobId } = await createProject(idea.trim());
-      const final = await waitForJob(pid, jobId, setStatus);
-      if (final !== "success") {
-        setError(t("generate.result", { status: final }));
+      setProjectId(pid);
+
+      // Live progress via SSE; fall back to polling if the stream can't open.
+      let terminal = "";
+      try {
+        await streamJobEvents(pid, jobId, (ev) => {
+          if (ev.type === "section_saved" && ev.section) {
+            setProgress((p) => (p.includes(ev.section!) ? p : [...p, ev.section!]));
+          }
+          if (ev.type === "running" || ev.type === "section_saved") setStatus(ev.type);
+          if (["success", "rejected", "failed"].includes(ev.type)) terminal = ev.type;
+        });
+      } catch {
+        /* SSE unavailable in this runtime — poll instead */
+      }
+      // Stream may close before a terminal event (server time cap) — confirm by polling.
+      if (!terminal) terminal = await waitForJob(pid, jobId, setStatus);
+
+      if (terminal !== "success") {
+        setError(t("generate.result", { status: terminal }));
         setPhase("error");
         return;
       }
       const detail = await getProjectDetail(pid);
       setSections(detail.sections);
       setMissing(detail.missingSections);
-      setProjectId(pid);
       setPhase("done");
     } catch (e) {
       setError(String(e));
@@ -189,6 +208,12 @@ export default function Home() {
           >
             {phase === "generating" ? t("generate.running", { status }) : t("generate.button")}
           </button>
+
+          {phase === "generating" && progress.length > 0 && (
+            <p style={{ marginTop: 10, fontSize: 13, color: "#555" }}>
+              {t("generate.progress", { n: progress.length })}
+            </p>
+          )}
 
           <div style={{ marginTop: 10 }}>
             <button onClick={() => setManualOpen((v) => !v)} style={linkBtn}>

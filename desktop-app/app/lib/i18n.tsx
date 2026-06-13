@@ -12,6 +12,7 @@ const DICT: Record<string, { en: string; ko: string }> = {
   "idea.placeholder": { en: "e.g. A membership SaaS for neighborhood gyms", ko: "예: 동네 헬스장 회원관리 SaaS" },
   "generate.button": { en: "Generate spec", ko: "기획서 생성" },
   "generate.running": { en: "Generating… ({status})", ko: "생성 중… ({status})" },
+  "generate.progress": { en: "Generating… {n} sections done", ko: "생성 중… {n}개 섹션 완료" },
   "generate.result": { en: "Result: {status}", ko: "생성 결과: {status}" },
   "generate.partial": {
     en: "This model produced only {got} of {total} sections. For the full document, pick a larger Ollama model or switch to Anthropic in Settings.",
